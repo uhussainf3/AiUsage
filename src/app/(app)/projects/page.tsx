@@ -9,9 +9,9 @@ export default async function ProjectsPage() {
   const userId = session.user.id as string;
   const userRole = session.user.role ?? "QA_MEMBER";
 
-  // All users to populate PM selector (admins/PMs creating projects)
+  // Only PROJECT_MANAGER and ADMIN users for the PM selector
   const allUsers = await prisma.user.findMany({
-    where: { isActive: true },
+    where: { isActive: true, role: { in: ["PROJECT_MANAGER", "ADMIN"] } },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: "asc" },
   });
