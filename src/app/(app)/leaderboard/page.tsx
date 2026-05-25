@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import styles from "./leaderboard.module.css";
+import { fmtHours } from "@/lib/format";
 
 function getInitials(name?: string | null) {
   if (!name) return "?";
@@ -88,7 +89,7 @@ export default async function LeaderboardPage() {
                   <div className={styles.podStats}>
                     <div>
                       <div className={styles.podStatLabel}>Hours</div>
-                      <div className={styles.podStatVal}>{Number(top3[1].totalHours).toFixed(0)}h</div>
+                      <div className={styles.podStatVal}>{fmtHours(Number(top3[1].totalHours))}</div>
                     </div>
                     <div>
                       <div className={styles.podStatLabel}>Claims</div>
@@ -112,7 +113,7 @@ export default async function LeaderboardPage() {
                   <div className={styles.podStats}>
                     <div>
                       <div className={styles.podStatLabel}>Hours</div>
-                      <div className={styles.podStatVal}>{Number(top3[0].totalHours).toFixed(0)}h</div>
+                      <div className={styles.podStatVal}>{fmtHours(Number(top3[0].totalHours))}</div>
                     </div>
                     <div>
                       <div className={styles.podStatLabel}>Claims</div>
@@ -134,7 +135,7 @@ export default async function LeaderboardPage() {
                   <div className={styles.podStats}>
                     <div>
                       <div className={styles.podStatLabel}>Hours</div>
-                      <div className={styles.podStatVal}>{Number(top3[2].totalHours).toFixed(0)}h</div>
+                      <div className={styles.podStatVal}>{fmtHours(Number(top3[2].totalHours))}</div>
                     </div>
                     <div>
                       <div className={styles.podStatLabel}>Claims</div>
@@ -231,7 +232,7 @@ export default async function LeaderboardPage() {
             <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500 }}>Total Hours Saved</div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 28, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>{totalHours.toFixed(0)}h</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 28, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>{fmtHours(totalHours)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500 }}>Estimated Value</div>
@@ -260,7 +261,7 @@ export default async function LeaderboardPage() {
                         <span className="tool-chip">
                           <span className={`sw ${tool}`} />{label}
                         </span>
-                        <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{hours.toFixed(0)}h</span>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{fmtHours(hours)}</span>
                       </div>
                       <div style={{ background: "var(--surface)", borderRadius: 4, height: 6 }}>
                         <div style={{ width: `${pct}%`, height: "100%", background: "var(--red)", borderRadius: 4 }} />

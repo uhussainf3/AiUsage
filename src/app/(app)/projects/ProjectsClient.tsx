@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./projects.module.css";
+import { fmtHours } from "@/lib/format";
 
 interface PM {
   id: string;
@@ -198,7 +199,7 @@ export function ProjectsClient({
         </div>
         <div className={styles.divider} />
         <div className={styles.globalStat}>
-          <span className={styles.globalVal}>{globalStats.totalHours.toFixed(0)}h</span>
+          <span className={styles.globalVal}>{fmtHours(globalStats.totalHours)}</span>
           <span className={styles.globalLabel}>Total Hours Saved</span>
         </div>
         <div className={styles.divider} />

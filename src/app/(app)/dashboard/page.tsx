@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { fmtHours } from "@/lib/format";
 import Link from "next/link";
 import styles from "./dashboard.module.css";
 import { ClaimsTable } from "./ClaimsTable";
@@ -188,7 +189,7 @@ export default async function DashboardPage() {
                     {u.name ?? u.email?.split("@")[0]}
                     {u.submitterId === userId && <span style={{ color: "var(--red)", fontSize: 10, marginLeft: 4 }}>you</span>}
                   </span>
-                  <span className={styles.lbHours}>{Number(u.totalHours).toFixed(0)}h</span>
+                  <span className={styles.lbHours}>{fmtHours(Number(u.totalHours))}</span>
                 </div>
               ))}
               {leaderboard.length === 0 && (
@@ -207,7 +208,7 @@ export default async function DashboardPage() {
             <div style={{ padding: "16px 20px", display: "flex", gap: 20 }}>
               <div style={{ flex: 1, textAlign: "center" }}>
                 <div style={{ fontFamily: "var(--mono)", fontSize: 24, fontWeight: 700, color: "var(--ink)" }}>
-                  {(weekClaims._sum.hoursSaved ?? 0).toFixed(0)}h
+                  {fmtHours(weekClaims._sum.hoursSaved ?? 0)}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>saved this week</div>
               </div>

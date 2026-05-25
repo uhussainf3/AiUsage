@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import styles from "./profile.module.css";
 import Link from "next/link";
+import { fmtHours } from "@/lib/format";
 
 function getInitials(name?: string | null) {
   if (!name) return "?";
@@ -212,7 +213,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                       <div key={tool}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                           <span className="tool-chip"><span className={`sw ${tool}`} />{toolLabel(tool)}</span>
-                          <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{hours.toFixed(0)}h</span>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{fmtHours(hours)}</span>
                         </div>
                         <div style={{ background: "var(--surface)", borderRadius: 4, height: 6 }}>
                           <div style={{ width: `${pct}%`, height: "100%", background: "var(--red)", borderRadius: 4 }} />

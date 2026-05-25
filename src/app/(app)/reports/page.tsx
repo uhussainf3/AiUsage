@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import styles from "./reports.module.css";
 import Link from "next/link";
+import { fmtHours } from "@/lib/format";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -104,7 +105,7 @@ export default async function ReportsPage() {
       <div className={styles.kpiGrid}>
         <div className="stat-card dark">
           <div className="stat-label">Total Hours Saved</div>
-          <div className="stat-value">{totalHours.toFixed(0)}h</div>
+          <div className="stat-value">{fmtHours(totalHours)}</div>
           <div className="stat-sub">All approved claims</div>
         </div>
         <div className="stat-card">
@@ -140,7 +141,7 @@ export default async function ReportsPage() {
               {weeks.map((w) => (
                 <div key={w.label} className={styles.barCol}>
                   <div className={styles.barLabel} style={{ fontSize: 11, color: "var(--muted)" }}>
-                    {w.hours > 0 ? `${w.hours.toFixed(0)}h` : ""}
+                    {w.hours > 0 ? fmtHours(w.hours) : ""}
                   </div>
                   <div className={styles.barOuter}>
                     <div
@@ -170,7 +171,7 @@ export default async function ReportsPage() {
                 <div key={tool}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                     <span className="tool-chip"><span className={`sw ${tool}`} />{label}</span>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{hours.toFixed(0)}h</span>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{fmtHours(hours)}</span>
                   </div>
                   <div style={{ background: "var(--surface)", borderRadius: 4, height: 8 }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: "var(--red)", borderRadius: 4 }} />
@@ -195,7 +196,7 @@ export default async function ReportsPage() {
                 <div key={type}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                     <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{typeLabel[type] ?? type}</span>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{hours.toFixed(0)}h</span>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600 }}>{fmtHours(hours)}</span>
                   </div>
                   <div style={{ background: "var(--surface)", borderRadius: 4, height: 8 }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: "var(--blue)", borderRadius: 4 }} />
