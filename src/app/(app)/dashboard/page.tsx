@@ -76,13 +76,13 @@ export default async function DashboardPage() {
   const leaderboard = await prisma.$queryRaw<
     { submitterId: string; name: string | null; email: string | null; totalHours: number }[]
   >`
-    SELECT c.submitterId, u.name, u.email,
-           SUM(c.hoursSaved) as totalHours
-    FROM Claim c
-    JOIN User u ON u.id = c.submitterId
+    SELECT c."submitterId", u.name, u.email,
+           SUM(c."hoursSaved") as "totalHours"
+    FROM "Claim" c
+    JOIN "User" u ON u.id = c."submitterId"
     WHERE c.status IN ('APPROVED', 'REDUCED')
-    GROUP BY c.submitterId
-    ORDER BY totalHours DESC
+    GROUP BY c."submitterId", u.name, u.email
+    ORDER BY "totalHours" DESC
     LIMIT 5
   `;
 

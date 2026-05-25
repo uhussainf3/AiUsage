@@ -64,13 +64,13 @@ export default async function ReportsPage() {
     { name: string | null; email: string | null; totalHours: number; claimCount: number }[]
   >`
     SELECT u.name, u.email,
-           SUM(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN c.hoursSaved ELSE 0 END) as totalHours,
-           COUNT(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN 1 END) as claimCount
-    FROM User u
-    LEFT JOIN Claim c ON c.submitterId = u.id
-    WHERE u.isActive = 1
-    GROUP BY u.id
-    ORDER BY totalHours DESC
+           SUM(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN c."hoursSaved" ELSE 0 END) as "totalHours",
+           COUNT(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN 1 END) as "claimCount"
+    FROM "User" u
+    LEFT JOIN "Claim" c ON c."submitterId" = u.id
+    WHERE u."isActive" = true
+    GROUP BY u.id, u.name, u.email
+    ORDER BY "totalHours" DESC
     LIMIT 10
   `;
 

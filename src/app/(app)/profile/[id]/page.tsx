@@ -50,10 +50,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
   // Rank
   const allRankings = await prisma.$queryRaw<{ submitterId: string }[]>`
-    SELECT submitterId FROM Claim
+    SELECT "submitterId" FROM "Claim"
     WHERE status IN ('APPROVED','REDUCED')
-    GROUP BY submitterId
-    ORDER BY SUM(hoursSaved) DESC
+    GROUP BY "submitterId"
+    ORDER BY SUM("hoursSaved") DESC
   `;
   const rank = allRankings.findIndex((r) => r.submitterId === targetId) + 1;
 

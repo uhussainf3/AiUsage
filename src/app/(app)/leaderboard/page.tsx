@@ -22,13 +22,13 @@ export default async function LeaderboardPage() {
     { id: string; name: string | null; email: string | null; role: string; tier: string; totalHours: number; claimCount: number }[]
   >`
     SELECT u.id, u.name, u.email, u.role, u.tier,
-           COALESCE(SUM(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN c.hoursSaved ELSE 0 END), 0) as totalHours,
-           COUNT(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN 1 END) as claimCount
-    FROM User u
-    LEFT JOIN Claim c ON c.submitterId = u.id
-    WHERE u.isActive = 1
-    GROUP BY u.id
-    ORDER BY totalHours DESC
+           COALESCE(SUM(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN c."hoursSaved" ELSE 0 END), 0) as "totalHours",
+           COUNT(CASE WHEN c.status IN ('APPROVED','REDUCED') THEN 1 END) as "claimCount"
+    FROM "User" u
+    LEFT JOIN "Claim" c ON c."submitterId" = u.id
+    WHERE u."isActive" = true
+    GROUP BY u.id, u.name, u.email, u.role, u.tier
+    ORDER BY "totalHours" DESC
   `;
 
   // Team totals
