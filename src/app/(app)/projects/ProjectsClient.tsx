@@ -108,6 +108,9 @@ export function ProjectsClient({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
+  // Local projects state so edits are reflected without full reload
+  const [localProjects, setLocalProjects] = useState(projects);
+
   // Create project modal
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -117,11 +120,20 @@ export function ProjectsClient({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
+  // Edit project modal
+  const [editProject, setEditProject] = useState<ProjectStat | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editKey, setEditKey] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editPmId, setEditPmId] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState("");
+
   // Sort/filter
   const [sortBy, setSortBy] = useState<"hours" | "claims" | "name" | "activity">("hours");
   const [filterPm, setFilterPm] = useState("");
 
-  const sorted = [...projects]
+  const sorted = [...localProjects]
     .filter((p) => !filterPm || p.pm.id === filterPm)
     .sort((a, b) => {
       if (sortBy === "hours") return b.totalHours - a.totalHours;
@@ -166,9 +178,65 @@ export function ProjectsClient({
     }
   }
 
+  function openEdit(p: ProjectStat) {
+    setEditProject(p);
+    setEditName(p.name);
+    setEditKey(p.jiraProjectKey ?? "");
+    setEditDesc(p.description ?? "");
+    setEditPmId(p.pm.id);
+    setEditError("");
+  }
+
+  async function handleEdit() {
+    if (!editProject) return;
+    setEditing(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/projects/${editProject.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          jiraProjectKey: editKey.trim().toUpperCase() || null,
+          description: editDesc.trim() || null,
+          pmId: editPmId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error ?? "Failed to update project.");
+        return;
+      }
+      // Update local state — find the new PM details from allUsers
+      const newPm = allUsers.find((u) => u.id === editPmId);
+      setLocalProjects((prev) =>
+        prev.map((p) =>
+          p.id === editProject.id
+            ? {
+                ...p,
+                name: editName.trim(),
+                jiraProjectKey: editKey.trim().toUpperCase() || null,
+                description: editDesc.trim() || null,
+                pm: {
+                  id: editPmId,
+                  name: newPm?.name ?? null,
+                  email: newPm?.email ?? null,
+                },
+              }
+            : p
+        )
+      );
+      setEditProject(null);
+    } catch {
+      setEditError("Network error. Please try again.");
+    } finally {
+      setEditing(false);
+    }
+  }
+
   // Unique PMs for filter
   const pmOptions = Array.from(
-    new Map(projects.map((p) => [p.pm.id, p.pm])).values()
+    new Map(localProjects.map((p) => [p.pm.id, p.pm])).values()
   );
 
   return (
@@ -310,6 +378,17 @@ export function ProjectsClient({
                       <div className={styles.desc}>{p.description}</div>
                     )}
                   </div>
+                  {/* Edit button — visible to admin or the project's own PM */}
+                  {(currentUserRole === "ADMIN" || isMyProject) && (
+                    <button
+                      className="btn sm ghost"
+                      onClick={() => openEdit(p)}
+                      title="Edit project"
+                      style={{ flexShrink: 0 }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  )}
                 </div>
 
                 {/* PM row */}
@@ -410,6 +489,100 @@ export function ProjectsClient({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Edit project modal ── */}
+      {editProject && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setEditProject(null)}>
+          <div style={modalStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Edit Project</h2>
+              <button
+                onClick={() => setEditProject(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--muted)" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="field" style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>Project Name *</label>
+              <input
+                className="input"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="field" style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>
+                Jira Project Key
+                <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>(optional)</span>
+              </label>
+              <input
+                className="input mono"
+                placeholder="e.g. QA or PROJ"
+                value={editKey}
+                onChange={(e) => setEditKey(e.target.value.toUpperCase())}
+                maxLength={12}
+              />
+            </div>
+
+            <div className="field" style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>
+                Description
+                <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>(optional)</span>
+              </label>
+              <textarea
+                className="textarea"
+                rows={2}
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+              />
+            </div>
+
+            <div className="field" style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>Project Manager *</label>
+              <select
+                className="select"
+                value={editPmId}
+                onChange={(e) => setEditPmId(e.target.value)}
+              >
+                {allUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name ?? u.email?.split("@")[0]} — {u.role.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+              <span className="help">
+                Only Project Managers and Admins are listed.
+              </span>
+            </div>
+
+            {editError && (
+              <div style={{
+                color: "var(--rose)", fontSize: 13, padding: "10px 14px",
+                background: "var(--rose-soft)", borderRadius: 6, marginBottom: 16,
+              }}>
+                {editError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn ghost" onClick={() => setEditProject(null)} disabled={editing}>
+                Cancel
+              </button>
+              <button
+                className="btn primary"
+                onClick={handleEdit}
+                disabled={editing || editName.trim().length < 2 || !editPmId}
+              >
+                {editing ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
