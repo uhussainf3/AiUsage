@@ -1,0 +1,273 @@
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.step {
+  position: relative;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+}
+
+.step:last-child {
+  border-right: 0;
+}
+
+.stepNum {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.stepLbl {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.stepName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 1px;
+}
+
+.done .stepNum {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--red);
+}
+
+.active .stepNum {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.upcoming .stepName {
+  color: var(--muted);
+}
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+}
+
+.main {
+  min-width: 0;
+}
+
+/* ── Jira card ── */
+.jiraCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.jiraCardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jiraMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.jiraMetaLabel {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+/* ── Tool toggles ── */
+.toolToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+
+.toolToggle:hover {
+  border-color: var(--border-strong);
+  background: #fff;
+}
+
+/* ── Peer list ── */
+.peerList {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.peerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.peerRow:last-child {
+  border-bottom: 0;
+}
+
+.peerRow:hover {
+  background: var(--surface);
+}
+
+.peerSelected {
+  background: var(--red-tint) !important;
+  border-left: 3px solid var(--red);
+}
+
+/* ── Routing card ── */
+.routingCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.routingTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.routingSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.routingStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.routingDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.routingStep b {
+  font-size: 13px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.routingStep p {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── Impact sidebar ── */
+.impactSidebar {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+}
+
+.impactCard {
+  background: var(--ink);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.impactTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.impactRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.impactLabel {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.impactVal {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.impactDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}

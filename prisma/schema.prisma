@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── NextAuth required models ───────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core models ─────────────────────────────────────────────────────────────
+
+// Role: QA_MEMBER | QA_LEAD | DEV_LEAD | PROJECT_MANAGER | ADMIN
+// Tier: NEW | TRUSTED | PRO
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("QA_MEMBER")
+  tier          String    @default("NEW")
+  isActive      Boolean   @default(true)
+  approvalCount Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts           Account[]
+  sessions           Session[]
+  claimsSubmitted    Claim[]    @relation("Submitter")
+  claimsCorroborated Claim[]    @relation("Corroborator")
+  claimsApproved     Claim[]    @relation("Approver")
+  badges             UserBadge[]
+  notifications      Notification[]
+  managedProjects    Project[]  @relation("ProjectPM")
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  jiraProjectKey String?  @unique
+  description    String?
+  isActive       Boolean  @default(true)
+  pmId           String
+  pm             User     @relation("ProjectPM", fields: [pmId], references: [id])
+  claims         Claim[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ClaimStatus: PENDING | CORROBORATED | APPROVED | REDUCED | REJECTED
+// ClaimType:   TEST_AUTOMATION | BUG_DETECTION | REGRESSION | CI_CD | CODE_REVIEW | OTHER
+
+model Claim {
+  id               String   @id @default(cuid())
+  jiraTicketUrl    String
+  jiraTicketId     String
+  jiraProjectKey   String?
+  jiraSummary      String?
+  jiraHoursLogged  Float    @default(0)
+  jiraAssignee     String?
+  jiraSprint       String?
+  estimatedWithout Float
+  estimatedWith    Float
+  hoursSaved       Float
+  toolsUsed        String   // JSON array stored as string e.g. '["claude","playwright"]'
+  claimType        String   @default("OTHER")
+  description      String
+  attachmentUrl    String?
+  status           String   @default("PENDING")
+  approvedHours    Float?
+  rejectReason     String?
+  jiraMatchPct     Int      @default(0)
+
+  submitterId      String
+  submitter        User     @relation("Submitter", fields: [submitterId], references: [id])
+  corroboratorId   String?
+  corroborator     User?    @relation("Corroborator", fields: [corroboratorId], references: [id])
+  corroboratorNote String?
+  approverId       String?
+  approver         User?    @relation("Approver", fields: [approverId], references: [id])
+  projectId        String?
+  project          Project? @relation(fields: [projectId], references: [id])
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Badge {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  description String
+  icon        String
+  color       String     @default("#C0392B")
+  threshold   Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

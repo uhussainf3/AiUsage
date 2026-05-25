@@ -1,0 +1,102 @@
+.coverCard {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: -20px;
+}
+
+.coverGradient {
+  height: 120px;
+  background: linear-gradient(135deg, var(--red) 0%, #8B3020 100%);
+}
+
+.coverContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 0 28px 16px;
+}
+
+.coverName {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.coverRole {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 2px;
+}
+
+.coverBadge {
+  margin-left: auto;
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Stat strip ── */
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-top: 28px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.statBox {
+  padding: 16px 20px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+
+.statBox:last-child {
+  border-right: 0;
+}
+
+.statBoxVal {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.statBoxLabel {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Main grid ── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

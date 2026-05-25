@@ -1,0 +1,57 @@
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lbRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.lbRow:last-child {
+  border-bottom: 0;
+}
+
+.lbRow:hover {
+  background: var(--red-tint);
+}
+
+.lbRank {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.lbName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.lbHours {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
