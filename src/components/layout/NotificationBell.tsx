@@ -31,14 +31,31 @@ export function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  async function fetchNotifications() {
+    try {
+      const r = await fetch("/api/notifications");
+      const data = await r.json();
+      if (Array.isArray(data)) setNotifications(data);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Initial fetch on mount
   useEffect(() => {
-    fetch("/api/notifications")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setNotifications(data);
-      })
-      .catch(() => {});
+    fetchNotifications();
   }, []);
+
+  // Poll every 30 seconds for new notifications
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Re-fetch every time the dropdown is opened (always fresh)
+  useEffect(() => {
+    if (open) fetchNotifications();
+  }, [open]);
 
   // Close on outside click
   useEffect(() => {
