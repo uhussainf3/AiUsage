@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./settings.module.css";
 
 interface User {
@@ -64,14 +65,25 @@ function Toggle({ on, onClick, saving }: { on: boolean; onClick: () => void; sav
 }
 
 export function SettingsClient({
-  users,
+  users: initialUsers,
   claimSettings,
 }: {
   users: User[];
   claimSettings: ClaimSettings;
 }) {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState("users");
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Add-user modal state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addEmail, setAddEmail] = useState("");
+  const [addName, setAddName] = useState("");
+  const [addRole, setAddRole] = useState("QA_MEMBER");
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   // Claim submission rules
   const [requireCorroborator, setRequireCorroborator] = useState(
@@ -87,12 +99,69 @@ export function SettingsClient({
 
   async function updateUser(userId: string, updates: Partial<User>) {
     setSavingId(userId);
-    await fetch(`/api/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-    setSavingId(null);
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const updated: User = await res.json();
+        setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (!confirm("Remove this user? They have no claims so this is safe.")) return;
+    setSavingId(userId);
+    try {
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+      } else {
+        const data = await res.json();
+        alert(data.error ?? "Could not delete user.");
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  function openAddModal() {
+    setAddEmail("");
+    setAddName("");
+    setAddRole("QA_MEMBER");
+    setAddError(null);
+    setAddOpen(true);
+    setTimeout(() => emailRef.current?.focus(), 50);
+  }
+
+  async function handleAddUser(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError(null);
+    setAddSaving(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: addEmail.trim(), name: addName.trim() || undefined, role: addRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAddError(data.error ?? "Failed to add user.");
+        return;
+      }
+      setUsers((prev) => [...prev, data as User]);
+      setAddOpen(false);
+      router.refresh();
+    } catch {
+      setAddError("Network error. Please try again.");
+    } finally {
+      setAddSaving(false);
+    }
   }
 
   async function handleToggle(key: string, newValue: boolean) {
@@ -150,81 +219,195 @@ export function SettingsClient({
         {/* ── Content panels ── */}
         <div>
           {activeSection === "users" && (
-            <div className="card">
-              <div className="card-head">
-                <div className="card-title">Users <span className="count">{users.length}</span></div>
-              </div>
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Member</th>
-                    <th>Role</th>
-                    <th>Tier</th>
-                    <th>Approvals</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id}>
-                      <td>
-                        <div className="cell-user">
-                          <div className="avatar sm">{getInitials(u.name)}</div>
-                          <div>
-                            <div className="nm">{u.name ?? u.email?.split("@")[0]}</div>
-                            <div className="role">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
+            <>
+              {/* Add User Modal */}
+              {addOpen && (
+                <div
+                  style={{
+                    position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 500,
+                  }}
+                  onClick={(e) => { if (e.target === e.currentTarget) setAddOpen(false); }}
+                >
+                  <div style={{
+                    background: "var(--surface)", borderRadius: 12,
+                    boxShadow: "var(--shadow-lift)", width: 440, padding: 28,
+                  }}>
+                    <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Add User</h2>
+                    <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
+                      The user will appear in the system immediately. When they sign in via Google
+                      with this email, their assigned role will be preserved automatically.
+                    </p>
+
+                    <form onSubmit={handleAddUser} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      <div className="field">
+                        <label>Email <span style={{ color: "var(--red)" }}>*</span></label>
+                        <input
+                          ref={emailRef}
+                          className="input"
+                          type="email"
+                          placeholder="user@folio3.com"
+                          value={addEmail}
+                          onChange={(e) => setAddEmail(e.target.value)}
+                          required
+                        />
+                        <span className="help">Must be a @folio3.com address</span>
+                      </div>
+
+                      <div className="field">
+                        <label>Full Name <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+                        <input
+                          className="input"
+                          type="text"
+                          placeholder="e.g. Ahmed Khan"
+                          value={addName}
+                          onChange={(e) => setAddName(e.target.value)}
+                        />
+                        <span className="help">Will be updated from Google profile on first login</span>
+                      </div>
+
+                      <div className="field">
+                        <label>Role <span style={{ color: "var(--red)" }}>*</span></label>
                         <select
                           className="select"
-                          style={{ width: "auto", padding: "5px 8px", fontSize: 12.5 }}
-                          defaultValue={u.role}
-                          onChange={(e) => updateUser(u.id, { role: e.target.value })}
+                          value={addRole}
+                          onChange={(e) => setAddRole(e.target.value)}
                         >
                           {ROLES.map((r) => (
                             <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
                           ))}
                         </select>
-                      </td>
-                      <td>
-                        <select
-                          className="select"
-                          style={{ width: "auto", padding: "5px 8px", fontSize: 12.5 }}
-                          defaultValue={u.tier}
-                          onChange={(e) => updateUser(u.id, { tier: e.target.value })}
+                      </div>
+
+                      {addError && (
+                        <div style={{
+                          background: "#fff5f5", border: "1px solid var(--red)",
+                          borderRadius: 8, padding: "10px 14px",
+                          fontSize: 13, color: "var(--red)",
+                        }}>
+                          {addError}
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          onClick={() => setAddOpen(false)}
+                          disabled={addSaving}
                         >
-                          {TIERS.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="mono">{u.approvalCount}</td>
-                      <td>
-                        <span className={`chip ${u.isActive ? "approved" : "rejected"}`}>
-                          <span className="bullet" />
-                          {u.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td>
-                        {savingId === u.id ? (
-                          <span className="muted" style={{ fontSize: 12 }}>Saving…</span>
-                        ) : (
-                          <button
-                            className="btn sm danger"
-                            onClick={() => updateUser(u.id, { isActive: !u.isActive })}
-                          >
-                            {u.isActive ? "Deactivate" : "Activate"}
-                          </button>
-                        )}
-                      </td>
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn primary" disabled={addSaving}>
+                          {addSaving ? "Adding…" : "Add User"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              <div className="card">
+                <div className="card-head">
+                  <div className="card-title">Users <span className="count">{users.length}</span></div>
+                  <button className="btn sm primary" onClick={openAddModal}>+ Add User</button>
+                </div>
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th>Role</th>
+                      <th>Tier</th>
+                      <th>Approvals</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id}>
+                        <td>
+                          <div className="cell-user">
+                            <div className={`avatar sm ${u.isActive ? "" : "a-muted"}`}
+                              style={!u.isActive ? { opacity: 0.45 } : {}}>
+                              {getInitials(u.name)}
+                            </div>
+                            <div>
+                              <div className="nm" style={!u.isActive ? { color: "var(--muted)" } : {}}>
+                                {u.name ?? u.email?.split("@")[0]}
+                                {!u.isActive && (
+                                  <span style={{ marginLeft: 6, fontSize: 10, color: "var(--muted)", fontWeight: 400 }}>
+                                    (inactive)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="role">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            className="select"
+                            style={{ width: "auto", padding: "5px 8px", fontSize: 12.5 }}
+                            value={u.role}
+                            onChange={(e) => updateUser(u.id, { role: e.target.value })}
+                            disabled={savingId === u.id}
+                          >
+                            {ROLES.map((r) => (
+                              <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="select"
+                            style={{ width: "auto", padding: "5px 8px", fontSize: 12.5 }}
+                            value={u.tier}
+                            onChange={(e) => updateUser(u.id, { tier: e.target.value })}
+                            disabled={savingId === u.id}
+                          >
+                            {TIERS.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="mono">{u.approvalCount}</td>
+                        <td>
+                          <span className={`chip ${u.isActive ? "approved" : "neutral"}`}>
+                            <span className="bullet" />
+                            {u.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td>
+                          {savingId === u.id ? (
+                            <span className="muted" style={{ fontSize: 12 }}>Saving…</span>
+                          ) : (
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button
+                                className={`btn sm ${u.isActive ? "ghost" : "primary"}`}
+                                onClick={() => updateUser(u.id, { isActive: !u.isActive })}
+                              >
+                                {u.isActive ? "Deactivate" : "Activate"}
+                              </button>
+                              {u.approvalCount === 0 && (
+                                <button
+                                  className="btn sm danger"
+                                  title="Remove user (only available if they have no claims)"
+                                  onClick={() => deleteUser(u.id)}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {activeSection === "thresholds" && (
