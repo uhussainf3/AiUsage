@@ -52,6 +52,7 @@ export default async function DashboardPage() {
     claimType: c.claimType,
     description: c.description,
     status: c.status,
+    rejectReason: c.rejectReason,
     createdAt: c.createdAt.toISOString(),
     submitterId: c.submitterId,
     projectId: c.projectId,

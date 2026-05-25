@@ -15,6 +15,7 @@ export interface ClaimRow {
   claimType: string;
   description: string;
   status: string;
+  rejectReason: string | null;
   createdAt: string; // ISO string — serialized from Date on the server
   submitterId: string;
   projectId: string | null;
@@ -109,6 +110,9 @@ export function ClaimsTable({
   const [, startTransition] = useTransition();
   const [claims, setClaims] = useState<ClaimRow[]>(initialClaims);
 
+  /* ── View state ── */
+  const [viewingClaim, setViewingClaim] = useState<ClaimRow | null>(null);
+
   /* ── Edit state ── */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTools, setEditTools] = useState<string[]>([]);
@@ -140,6 +144,13 @@ export function ClaimsTable({
   function closeEdit() {
     setEditingId(null);
     setEditError("");
+  }
+
+  function openView(claim: ClaimRow) { setViewingClaim(claim); }
+  function closeView() { setViewingClaim(null); }
+  function viewThenEdit(claim: ClaimRow) {
+    closeView();
+    openEdit(claim);
   }
 
   function toggleEditTool(id: string) {
@@ -273,6 +284,9 @@ export function ClaimsTable({
             const { cls, label } = statusChip(claim.status);
             const tools = parseTools(claim.toolsUsed);
             const canEdit =
+              ["PENDING", "CORROBORATED"].includes(claim.status) &&
+              claim.submitterId === currentUserId;
+            const canDelete =
               claim.status === "PENDING" && claim.submitterId === currentUserId;
 
             return (
@@ -339,8 +353,16 @@ export function ClaimsTable({
                   })}
                 </td>
                 <td>
-                  {canEdit && (
-                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <button
+                      className="btn sm ghost"
+                      onClick={() => openView(claim)}
+                      title="View details"
+                      style={{ padding: "4px 8px" }}
+                    >
+                      👁
+                    </button>
+                    {canEdit && (
                       <button
                         className="btn sm ghost"
                         onClick={() => openEdit(claim)}
@@ -349,6 +371,8 @@ export function ClaimsTable({
                       >
                         ✏️
                       </button>
+                    )}
+                    {canDelete && (
                       <button
                         className="btn sm ghost"
                         onClick={() => openDelete(claim.id)}
@@ -357,14 +381,118 @@ export function ClaimsTable({
                       >
                         🗑
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+
+      {/* ── View modal ── */}
+      {viewingClaim && (() => {
+        const c = viewingClaim;
+        const { cls, label } = statusChip(c.status);
+        const tools = parseTools(c.toolsUsed);
+        const claimTypeLabel = CLAIM_TYPES.find((t) => t.value === c.claimType)?.label ?? c.claimType;
+        const canEditThis = ["PENDING", "CORROBORATED"].includes(c.status) && c.submitterId === currentUserId;
+        const canDeleteThis = c.status === "PENDING" && c.submitterId === currentUserId;
+        return (
+          <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && closeView()}>
+            <div style={{ ...modalStyle, maxWidth: 600 }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                <div>
+                  {c.jiraTicketUrl ? (
+                    <a href={c.jiraTicketUrl} target="_blank" rel="noopener noreferrer" className="ticket" style={{ fontSize: 13 }}>
+                      {c.jiraTicketId ?? "No ticket"}
+                    </a>
+                  ) : (
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--muted)" }}>{c.jiraTicketId ?? "No ticket"}</span>
+                  )}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                    <span className={`chip ${cls}`}><span className="bullet" />{label}</span>
+                    {c.projectName && (
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--blue)", background: "var(--blue-soft)", borderRadius: 4, padding: "2px 8px" }}>
+                        📁 {c.projectName}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                      🕐 {new Date(c.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={closeView} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--muted)", lineHeight: 1, flexShrink: 0 }}>✕</button>
+              </div>
+
+              {/* Tools & Type */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>AI Tools</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {tools.map((t) => (
+                      <span key={t} className="tool-chip"><span className={`sw ${t}`} />{toolLabel(t)}</span>
+                    ))}
+                    {tools.length === 0 && <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span>}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Claim Type</div>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{claimTypeLabel}</span>
+                </div>
+              </div>
+
+              {/* Hours grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 18 }}>
+                {[
+                  { label: "Without AI", value: `${c.estimatedWithout}h`, color: "" },
+                  { label: "With AI", value: `${c.estimatedWith}h`, color: "" },
+                  { label: "Hours Saved", value: `+${c.hoursSaved.toFixed(1)}h`, color: "var(--green)" },
+                  ...(c.approvedHours != null ? [{ label: "Approved", value: `${c.approvedHours}h`, color: "var(--blue)" }] : []),
+                ].map((box) => (
+                  <div key={box.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>{box.label}</div>
+                    <div style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: 16, color: box.color || "var(--ink)" }}>{box.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Description</div>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7, margin: 0, background: "var(--surface)", borderRadius: 8, padding: "12px 14px", border: "1px solid var(--border)" }}>
+                  {c.description}
+                </p>
+              </div>
+
+              {/* Reject reason */}
+              {c.rejectReason && (
+                <div style={{ marginBottom: 18, background: "var(--rose-soft)", border: "1px solid var(--rose)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--rose)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Rejection Reason</div>
+                  <p style={{ fontSize: 13, color: "var(--ink-2)", margin: 0, lineHeight: 1.6 }}>{c.rejectReason}</p>
+                </div>
+              )}
+
+              {/* Footer actions */}
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                {canDeleteThis && (
+                  <button className="btn ghost" style={{ color: "var(--rose)" }}
+                    onClick={() => { closeView(); openDelete(c.id); }}>
+                    🗑 Delete
+                  </button>
+                )}
+                <button className="btn ghost" onClick={closeView}>Close</button>
+                {canEditThis && (
+                  <button className="btn primary" onClick={() => viewThenEdit(c)}>
+                    ✏️ Edit Claim
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Edit modal ── */}
       {editingId && (

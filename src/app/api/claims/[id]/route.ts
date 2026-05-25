@@ -36,10 +36,10 @@ export const PUT = auth(async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Can only edit PENDING claims
-  if (claim.status !== "PENDING") {
+  // Can only edit PENDING or CORROBORATED claims (not yet approved/rejected)
+  if (!["PENDING", "CORROBORATED"].includes(claim.status)) {
     return NextResponse.json(
-      { error: `Cannot edit a claim with status: ${claim.status}. Only PENDING claims can be edited.` },
+      { error: `Cannot edit a claim with status: ${claim.status}. Only pending or corroborated claims can be edited.` },
       { status: 400 }
     );
   }
