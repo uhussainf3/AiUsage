@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const ClaimSchema = z.object({
-  jiraTicketUrl: z.string().url().optional().or(z.literal("")),
+  jiraTicketUrl: z.string().optional().default(""),
   jiraTicketId: z.string().optional().default(""),
   jiraProjectKey: z.string().optional(),
   jiraSummary: z.string().optional(),
@@ -54,7 +54,14 @@ export const POST = auth(async function POST(req) {
 
   const parsed = ClaimSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
+    const flat = parsed.error.flatten();
+    const fieldErrors = Object.entries(flat.fieldErrors)
+      .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+      .join(" | ");
+    return NextResponse.json(
+      { error: `Validation failed — ${fieldErrors || "check all fields"}`, details: flat },
+      { status: 400 }
+    );
   }
 
   const data = parsed.data;
