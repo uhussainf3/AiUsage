@@ -22,6 +22,7 @@ const NAV_TABS = [
   { label: "Projects", href: "/projects" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Verify", href: "/verification" },
+  { label: "Efficiency", href: "/efficiency" },
   { label: "Reports", href: "/reports" },
 ];
 
@@ -50,6 +51,7 @@ export function TopNav({ user }: TopNavProps) {
   const tabs = [
     ...NAV_TABS.filter((t) => {
       if (t.href === "/verification") return isLead;
+      if (t.href === "/efficiency") return isLead;
       if (t.href === "/reports") return isLead;
       return true;
     }),
