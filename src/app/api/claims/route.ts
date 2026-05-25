@@ -106,5 +106,20 @@ export const POST = auth(async function POST(req) {
     },
   });
 
+  // Notify corroborator if one was assigned
+  if (data.corroboratorId) {
+    const submitterName = session.user.name ?? session.user.email ?? "A teammate";
+    const ticketRef = data.jiraTicketId ? ` (${data.jiraTicketId})` : "";
+    await prisma.notification.create({
+      data: {
+        userId: data.corroboratorId,
+        type: "CORROBORATION_REQUEST",
+        title: "Corroboration Requested",
+        message: `${submitterName} asked you to corroborate a claim${ticketRef} — ${data.hoursSaved}h saved.`,
+        link: "/dashboard",
+      },
+    });
+  }
+
   return NextResponse.json(claim, { status: 201 });
 });

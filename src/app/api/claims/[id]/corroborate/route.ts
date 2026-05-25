@@ -42,6 +42,9 @@ export const POST = auth(async function POST(
 
   const { action, note } = parsed.data;
 
+  const ticketRef = claim.jiraTicketId ? ` (${claim.jiraTicketId})` : "";
+  const corroboratorName = session.user.name ?? session.user.email ?? "Your peer";
+
   let updated;
   if (action === "confirm") {
     updated = await prisma.claim.update({
@@ -51,6 +54,17 @@ export const POST = auth(async function POST(
         corroboratorNote: note ?? null,
       },
     });
+
+    // Notify the submitter their claim was corroborated
+    await prisma.notification.create({
+      data: {
+        userId: claim.submitterId,
+        type: "CLAIM_CORROBORATED",
+        title: "Claim Corroborated 👥",
+        message: `${corroboratorName} confirmed your claim${ticketRef}. It's now ready for approval.`,
+        link: "/dashboard",
+      },
+    });
   } else {
     // decline — remove corroborator, keep status PENDING
     updated = await prisma.claim.update({
@@ -58,6 +72,17 @@ export const POST = auth(async function POST(
       data: {
         corroboratorId: null,
         corroboratorNote: null,
+      },
+    });
+
+    // Notify the submitter their corroborator declined
+    await prisma.notification.create({
+      data: {
+        userId: claim.submitterId,
+        type: "CORROBORATION_DECLINED",
+        title: "Corroboration Declined",
+        message: `${corroboratorName} could not confirm your claim${ticketRef}. Please select a new corroborator.`,
+        link: "/dashboard",
       },
     });
   }
