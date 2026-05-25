@@ -57,11 +57,26 @@ function getAvatarClass(email?: string | null) {
   return n > 0 ? `a-${n + 1}` : "";
 }
 
-export function SubmitClaimClient({ userId, peers, projects }: { userId: string; peers: Peer[]; projects: Project[] }) {
+export function SubmitClaimClient({
+  userId,
+  peers,
+  projects,
+  settings = {},
+}: {
+  userId: string;
+  peers: Peer[];
+  projects: Project[];
+  settings?: Record<string, string>;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Derived settings flags
+  const requireCorroborator = settings.require_corroborator !== "false";
+  const requireJiraTicket = settings.require_jira_ticket === "true";
+  const requireProject = settings.require_project === "true";
 
   // Step 1
   const [jiraUrl, setJiraUrl] = useState("");
@@ -121,6 +136,22 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
     );
   }
 
+  // Validate step 1 for required fields
+  function canProceedFromStep1(): boolean {
+    if (requireJiraTicket && !jiraUrl.trim()) return false;
+    if (requireProject && !projectId) return false;
+    return true;
+  }
+
+  // When corroborator is not required, submitting from step 2 goes straight through
+  function handleProceedFromStep2() {
+    if (requireCorroborator) {
+      setStep(3);
+    } else {
+      handleSubmit();
+    }
+  }
+
   async function handleSubmit() {
     setSubmitting(true);
     setError("");
@@ -171,7 +202,11 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
             <span>Submit Claim</span>
           </div>
           <h1>Submit AI Productivity Claim</h1>
-          <p className="sub">3-step process: Jira link (optional) → impact details → corroborator</p>
+          <p className="sub">
+            {requireCorroborator
+              ? "3-step process: Jira link → impact details → corroborator"
+              : "2-step process: Jira link → impact details"}
+          </p>
         </div>
       </div>
 
@@ -180,7 +215,7 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
         {[
           { n: 1, label: "Jira Ticket", sub: "Link & auto-fetch" },
           { n: 2, label: "Impact Details", sub: "Tools & hours" },
-          { n: 3, label: "Corroboration", sub: "Peer & routing" },
+          ...(requireCorroborator ? [{ n: 3, label: "Corroboration", sub: "Peer & routing" }] : []),
         ].map(({ n, label, sub }) => (
           <div
             key={n}
@@ -208,15 +243,21 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                   Jira Ticket
                   <span className="count">Step 1</span>
                 </div>
-                <span className="chip neutral" style={{ fontSize: 11 }}>
-                  <span className="bullet" />Optional
-                </span>
+                {!requireJiraTicket && (
+                  <span className="chip neutral" style={{ fontSize: 11 }}>
+                    <span className="bullet" />Optional
+                  </span>
+                )}
               </div>
               <div style={{ padding: 22 }}>
                 <div className="field" style={{ marginBottom: 16 }}>
                   <label>
                     Jira Ticket URL
-                    <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>(optional)</span>
+                    {requireJiraTicket ? (
+                      <span style={{ color: "var(--rose)", marginLeft: 4 }}>*</span>
+                    ) : (
+                      <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>(optional)</span>
+                    )}
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
                     <div className="input-wrap">
@@ -239,9 +280,15 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                   {jiraError && (
                     <p style={{ color: "var(--rose)", fontSize: 12, marginTop: 4 }}>{jiraError}</p>
                   )}
+                  {requireJiraTicket && !jiraUrl.trim() && (
+                    <p style={{ color: "var(--rose)", fontSize: 12, marginTop: 4 }}>
+                      A Jira ticket URL is required to submit a claim.
+                    </p>
+                  )}
                   <p className="help">
-                    Linking a Jira ticket improves your claim&apos;s credibility and approval rate.
-                    You can skip this if no ticket exists for this task.
+                    {requireJiraTicket
+                      ? "A Jira ticket URL is required for all claims. Paste the URL and click Fetch Ticket."
+                      : "Linking a Jira ticket improves your claim’s credibility and approval rate. You can skip this if no ticket exists for this task."}
                   </p>
                 </div>
 
@@ -289,7 +336,11 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                 <div className="field" style={{ marginTop: 20 }}>
                   <label>
                     Project
-                    <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>(optional)</span>
+                    {requireProject ? (
+                      <span style={{ color: "var(--rose)", marginLeft: 4 }}>*</span>
+                    ) : (
+                      <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>(optional)</span>
+                    )}
                   </label>
                   {projects.length === 0 ? (
                     <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
@@ -301,7 +352,7 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                       value={projectId}
                       onChange={(e) => setProjectId(e.target.value)}
                     >
-                      <option value="">— No project / unassigned —</option>
+                      <option value="">{requireProject ? "— Select a project —" : "— No project / unassigned —"}</option>
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}{p.jiraProjectKey ? ` (${p.jiraProjectKey})` : ""}{p.pm.name ? ` · PM: ${p.pm.name.split(" ")[0]}` : ""}
@@ -324,18 +375,22 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                 </div>
 
                 <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <button
-                    className="btn ghost"
-                    onClick={() => setStep(2)}
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Skip Jira →
-                  </button>
+                  {!requireJiraTicket && (
+                    <button
+                      className="btn ghost"
+                      onClick={() => setStep(2)}
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Skip Jira →
+                    </button>
+                  )}
+                  {requireJiraTicket && <span />}
                   <button
                     className="btn primary"
                     onClick={() => setStep(2)}
+                    disabled={!canProceedFromStep1()}
                   >
-                    {jiraTicket ? "Next: Impact Details →" : "Continue without Jira →"}
+                    {jiraTicket ? "Next: Impact Details →" : requireJiraTicket ? "Fetch ticket to continue" : "Continue without Jira →"}
                   </button>
                 </div>
               </div>
@@ -448,14 +503,30 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
                   </span>
                 </div>
 
+                {!requireCorroborator && error && (
+                  <div style={{ color: "var(--rose)", fontSize: 13, padding: "10px 14px", background: "var(--rose-soft)", borderRadius: 6 }}>
+                    {error}
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
                   <button className="btn ghost" onClick={() => setStep(1)}>← Back</button>
                   <button
                     className="btn primary"
-                    onClick={() => setStep(3)}
-                    disabled={selectedTools.length === 0 || !estimatedWithout || !estimatedWith || !description.trim()}
+                    onClick={handleProceedFromStep2}
+                    disabled={
+                      selectedTools.length === 0 ||
+                      !estimatedWithout ||
+                      !estimatedWith ||
+                      !description.trim() ||
+                      submitting
+                    }
                   >
-                    Next: Corroboration →
+                    {requireCorroborator
+                      ? "Next: Corroboration →"
+                      : submitting
+                      ? "Submitting…"
+                      : "Submit Claim →"}
                   </button>
                 </div>
               </div>
@@ -463,7 +534,7 @@ export function SubmitClaimClient({ userId, peers, projects }: { userId: string;
           )}
 
           {/* ── Step 3 ── */}
-          {step === 3 && (
+          {requireCorroborator && step === 3 && (
             <div className="card">
               <div className="card-head">
                 <div className="card-title">

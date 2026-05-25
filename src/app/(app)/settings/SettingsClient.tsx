@@ -13,6 +13,12 @@ interface User {
   approvalCount: number;
 }
 
+interface ClaimSettings {
+  require_corroborator: string;
+  require_jira_ticket: string;
+  require_project: string;
+}
+
 const ROLES = ["QA_MEMBER", "QA_LEAD", "DEV_LEAD", "PROJECT_MANAGER", "ADMIN"];
 const TIERS = ["NEW", "TRUSTED", "PRO"];
 
@@ -21,9 +27,63 @@ function getInitials(name?: string | null) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-export function SettingsClient({ users }: { users: User[] }) {
+function Toggle({ on, onClick, saving }: { on: boolean; onClick: () => void; saving: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={saving}
+      title={saving ? "Saving…" : on ? "Enabled — click to disable" : "Disabled — click to enable"}
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        border: "none",
+        cursor: saving ? "not-allowed" : "pointer",
+        background: on ? "var(--green)" : "var(--border)",
+        position: "relative",
+        transition: "background 0.2s",
+        flexShrink: 0,
+        opacity: saving ? 0.6 : 1,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 3,
+          left: on ? 23 : 3,
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: "#fff",
+          transition: "left 0.2s",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+        }}
+      />
+    </button>
+  );
+}
+
+export function SettingsClient({
+  users,
+  claimSettings,
+}: {
+  users: User[];
+  claimSettings: ClaimSettings;
+}) {
   const [activeSection, setActiveSection] = useState("users");
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Claim submission rules
+  const [requireCorroborator, setRequireCorroborator] = useState(
+    claimSettings.require_corroborator === "true"
+  );
+  const [requireJiraTicket, setRequireJiraTicket] = useState(
+    claimSettings.require_jira_ticket === "true"
+  );
+  const [requireProject, setRequireProject] = useState(
+    claimSettings.require_project === "true"
+  );
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   async function updateUser(userId: string, updates: Partial<User>) {
     setSavingId(userId);
@@ -35,10 +95,29 @@ export function SettingsClient({ users }: { users: User[] }) {
     setSavingId(null);
   }
 
+  async function handleToggle(key: string, newValue: boolean) {
+    setSavingKey(key);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value: newValue ? "true" : "false" }),
+      });
+      if (key === "require_corroborator") setRequireCorroborator(newValue);
+      if (key === "require_jira_ticket") setRequireJiraTicket(newValue);
+      if (key === "require_project") setRequireProject(newValue);
+    } catch {
+      // ignore; UI stays optimistic
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   const nav = [
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "thresholds", label: "Approval Thresholds", icon: "⚙️" },
     { id: "tiers", label: "Trust Tiers", icon: "🎖️" },
+    { id: "claims", label: "Claim Submission", icon: "📋" },
     { id: "reports", label: "Reports", icon: "📊" },
     { id: "users", label: "Users", icon: "👥" },
     { id: "integrations", label: "Integrations", icon: "🔗" },
@@ -208,6 +287,65 @@ export function SettingsClient({ users }: { users: User[] }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeSection === "claims" && (
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">Claim Submission Rules</div>
+              </div>
+              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                {[
+                  {
+                    key: "require_corroborator",
+                    label: "Require Peer Corroborator",
+                    help: "Claims must be confirmed by a peer witness before review",
+                    value: requireCorroborator,
+                  },
+                  {
+                    key: "require_jira_ticket",
+                    label: "Require Jira Ticket",
+                    help: "A Jira ticket URL must be provided with every claim",
+                    value: requireJiraTicket,
+                  },
+                  {
+                    key: "require_project",
+                    label: "Require Project",
+                    help: "Claims must be assigned to a project",
+                    value: requireProject,
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.key}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 20,
+                      padding: "16px 0",
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: "var(--muted)" }}>{item.help}</div>
+                      {savingKey === item.key && (
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                          Saving…
+                        </div>
+                      )}
+                    </div>
+                    <Toggle
+                      on={item.value}
+                      onClick={() => handleToggle(item.key, !item.value)}
+                      saving={savingKey === item.key}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
