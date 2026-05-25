@@ -36,6 +36,10 @@ async function main() {
     { key: "leaderboard_default_period", value: "MONTHLY" },
     { key: "report_schedule_weekly", value: "true" },
     { key: "report_schedule_monthly", value: "true" },
+    // Claim submission configurability
+    { key: "require_corroborator", value: "true" },
+    { key: "require_jira_ticket", value: "false" },
+    { key: "require_project", value: "false" },
   ];
 
   for (const s of settings) {

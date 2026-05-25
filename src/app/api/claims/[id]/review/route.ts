@@ -19,7 +19,7 @@ export const POST = auth(async function POST(
   }
 
   const { id } = await params;
-  const { action, approvedHours, rejectReason } = await req.json();
+  const { action, approvedHours, rejectReason, approverNote } = await req.json();
 
   const claim = await prisma.claim.findUnique({ where: { id } });
   if (!claim) return NextResponse.json({ error: "Claim not found" }, { status: 404 });
@@ -27,9 +27,9 @@ export const POST = auth(async function POST(
   let updateData: Record<string, unknown> = { approverId: session.user.id };
 
   if (action === "approve") {
-    updateData = { ...updateData, status: "APPROVED", approvedHours: claim.hoursSaved };
+    updateData = { ...updateData, status: "APPROVED", approvedHours: claim.hoursSaved, approverNote: approverNote ?? null };
   } else if (action === "reduce") {
-    updateData = { ...updateData, status: "REDUCED", approvedHours: Number(approvedHours) };
+    updateData = { ...updateData, status: "REDUCED", approvedHours: Number(approvedHours), approverNote: approverNote ?? null };
   } else if (action === "reject") {
     updateData = { ...updateData, status: "REJECTED", rejectReason };
   } else {

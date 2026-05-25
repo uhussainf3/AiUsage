@@ -117,6 +117,7 @@ model Claim {
   corroboratorNote String?
   approverId       String?
   approver         User?    @relation("Approver", fields: [approverId], references: [id])
+  approverNote     String?
   projectId        String?
   project          Project? @relation(fields: [projectId], references: [id])
 

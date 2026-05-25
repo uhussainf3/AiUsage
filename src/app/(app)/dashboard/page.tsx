@@ -5,6 +5,8 @@ import Link from "next/link";
 import styles from "./dashboard.module.css";
 import { ClaimsTable } from "./ClaimsTable";
 import type { ClaimRow, ProjectOption } from "./ClaimsTable";
+import { CorroborationQueue } from "./CorroborationQueue";
+import type { CorroborationClaim } from "./CorroborationQueue";
 
 function getInitials(name?: string | null) {
   if (!name) return "?";
@@ -24,7 +26,7 @@ export default async function DashboardPage() {
 
   const userId = session.user.id as string;
 
-  const [rawClaims, rawProjects] = await Promise.all([
+  const [rawClaims, rawProjects, rawCorroborations] = await Promise.all([
     prisma.claim.findMany({
       where: { submitterId: userId },
       orderBy: { createdAt: "desc" },
@@ -35,6 +37,14 @@ export default async function DashboardPage() {
       where: { isActive: true },
       select: { id: true, name: true, jiraProjectKey: true },
       orderBy: { name: "asc" },
+    }),
+    prisma.claim.findMany({
+      where: { corroboratorId: userId, status: "PENDING" },
+      include: {
+        submitter: { select: { name: true, email: true } },
+        project: { select: { name: true } },
+      },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -54,10 +64,22 @@ export default async function DashboardPage() {
     description: c.description,
     status: c.status,
     rejectReason: c.rejectReason,
+    approverNote: c.approverNote,
     createdAt: c.createdAt.toISOString(),
     submitterId: c.submitterId,
     projectId: c.projectId,
     projectName: c.project?.name ?? null,
+  }));
+
+  const myCorroborations: CorroborationClaim[] = rawCorroborations.map((c) => ({
+    id: c.id,
+    jiraTicketId: c.jiraTicketId,
+    jiraSummary: c.jiraSummary,
+    hoursSaved: c.hoursSaved,
+    description: c.description,
+    submitter: { name: c.submitter.name, email: c.submitter.email },
+    project: c.project ? { name: c.project.name } : null,
+    createdAt: c.createdAt.toISOString(),
   }));
 
   // Aggregate stats
@@ -148,6 +170,9 @@ export default async function DashboardPage() {
           <div className="stat-sub">{session.user.tier} member</div>
         </div>
       </div>
+
+      {/* ── Corroboration queue ── */}
+      <CorroborationQueue claims={myCorroborations} />
 
       {/* ── Main content ── */}
       <div className={styles.mainGrid}>

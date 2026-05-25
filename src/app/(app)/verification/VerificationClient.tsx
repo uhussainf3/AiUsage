@@ -50,6 +50,7 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
   const [selectedId, setSelectedId] = useState<string>(claims[0]?.id ?? "");
   const [reduceHours, setReduceHours] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [approverNote, setApproverNote] = useState("");
   const [loading, setLoading] = useState(false);
 
   const selected = claims.find((c) => c.id === selectedId);
@@ -67,6 +68,7 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
           action,
           approvedHours: action === "reduce" ? Number(reduceHours) : undefined,
           rejectReason: action === "reject" ? rejectReason : undefined,
+          approverNote: (action === "approve" || action === "reduce") ? approverNote || undefined : undefined,
         }),
       });
       router.refresh();
@@ -243,6 +245,19 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
 
               {/* Actions */}
               <div className={styles.actions}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>
+                    Note for submitter (optional)
+                  </label>
+                  <textarea
+                    className="textarea"
+                    rows={2}
+                    value={approverNote}
+                    onChange={(e) => setApproverNote(e.target.value)}
+                    placeholder="Add a note for the submitter (shown on approve or reduce)…"
+                    style={{ width: "100%", resize: "vertical", minHeight: 56, fontSize: 13 }}
+                  />
+                </div>
                 <div className={styles.actionsRow}>
                   <button
                     className="btn success"

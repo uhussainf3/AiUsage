@@ -16,6 +16,7 @@ export interface ClaimRow {
   description: string;
   status: string;
   rejectReason: string | null;
+  approverNote: string | null;
   createdAt: string; // ISO string — serialized from Date on the server
   submitterId: string;
   projectId: string | null;
@@ -198,6 +199,8 @@ export function ClaimsTable({
                   toolsUsed: updated.toolsUsed,
                   claimType: updated.claimType,
                   description: updated.description,
+                  status: updated.status,
+                  rejectReason: updated.rejectReason,
                   projectId: editProjectId || null,
                   projectName: newProjectName,
                 }
@@ -284,7 +287,7 @@ export function ClaimsTable({
             const { cls, label } = statusChip(claim.status);
             const tools = parseTools(claim.toolsUsed);
             const canEdit =
-              ["PENDING", "CORROBORATED"].includes(claim.status) &&
+              ["PENDING", "CORROBORATED", "REJECTED"].includes(claim.status) &&
               claim.submitterId === currentUserId;
             const canDelete =
               claim.status === "PENDING" && claim.submitterId === currentUserId;
@@ -396,7 +399,8 @@ export function ClaimsTable({
         const { cls, label } = statusChip(c.status);
         const tools = parseTools(c.toolsUsed);
         const claimTypeLabel = CLAIM_TYPES.find((t) => t.value === c.claimType)?.label ?? c.claimType;
-        const canEditThis = ["PENDING", "CORROBORATED"].includes(c.status) && c.submitterId === currentUserId;
+        const canEditThis = ["PENDING", "CORROBORATED", "REJECTED"].includes(c.status) && c.submitterId === currentUserId;
+        const isRejectedOwned = c.status === "REJECTED" && c.submitterId === currentUserId;
         const canDeleteThis = c.status === "PENDING" && c.submitterId === currentUserId;
         return (
           <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && closeView()}>
@@ -466,6 +470,14 @@ export function ClaimsTable({
                 </p>
               </div>
 
+              {/* Approver note */}
+              {(c.status === "APPROVED" || c.status === "REDUCED") && c.approverNote && (
+                <div style={{ marginBottom: 18, background: "var(--blue-soft)", border: "1px solid var(--blue)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Note from reviewer</div>
+                  <p style={{ fontSize: 13, color: "var(--ink-2)", margin: 0, lineHeight: 1.6 }}>{c.approverNote}</p>
+                </div>
+              )}
+
               {/* Reject reason */}
               {c.rejectReason && (
                 <div style={{ marginBottom: 18, background: "var(--rose-soft)", border: "1px solid var(--rose)", borderRadius: 8, padding: "12px 14px" }}>
@@ -483,7 +495,12 @@ export function ClaimsTable({
                   </button>
                 )}
                 <button className="btn ghost" onClick={closeView}>Close</button>
-                {canEditThis && (
+                {isRejectedOwned && (
+                  <button className="btn primary" onClick={() => viewThenEdit(c)}>
+                    ✏️ Edit &amp; Resubmit
+                  </button>
+                )}
+                {canEditThis && !isRejectedOwned && (
                   <button className="btn primary" onClick={() => viewThenEdit(c)}>
                     ✏️ Edit Claim
                   </button>
@@ -655,6 +672,20 @@ export function ClaimsTable({
                 }}
               >
                 {editError}
+              </div>
+            )}
+
+            {claims.find((c) => c.id === editingId)?.status === "REJECTED" && (
+              <div style={{
+                fontSize: 13,
+                padding: "10px 14px",
+                background: "var(--blue-soft)",
+                border: "1px solid var(--blue)",
+                borderRadius: 6,
+                marginBottom: 16,
+                color: "var(--blue)",
+              }}>
+                Saving will resubmit this claim for review.
               </div>
             )}
 

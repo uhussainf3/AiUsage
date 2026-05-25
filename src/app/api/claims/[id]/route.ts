@@ -36,10 +36,10 @@ export const PUT = auth(async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Can only edit PENDING or CORROBORATED claims (not yet approved/rejected)
-  if (!["PENDING", "CORROBORATED"].includes(claim.status)) {
+  // Can only edit PENDING, CORROBORATED, or REJECTED claims
+  if (!["PENDING", "CORROBORATED", "REJECTED"].includes(claim.status)) {
     return NextResponse.json(
-      { error: `Cannot edit a claim with status: ${claim.status}. Only pending or corroborated claims can be edited.` },
+      { error: `Cannot edit a claim with status: ${claim.status}. Only pending, corroborated, or rejected claims can be edited.` },
       { status: 400 }
     );
   }
@@ -54,6 +54,7 @@ export const PUT = auth(async function PUT(
   }
 
   const data = parsed.data;
+  const isRejected = claim.status === "REJECTED";
   const updated = await prisma.claim.update({
     where: { id },
     data: {
@@ -67,6 +68,7 @@ export const PUT = auth(async function PUT(
       description: data.description,
       corroboratorId: data.corroboratorId ?? null,
       projectId: data.projectId !== undefined ? data.projectId : claim.projectId,
+      ...(isRejected ? { status: "PENDING", rejectReason: null } : {}),
     },
   });
 

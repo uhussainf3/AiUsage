@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 interface TopNavProps {
   user: {
@@ -83,6 +84,9 @@ export function TopNav({ user }: TopNavProps) {
             <span className="bullet" />
             {user.tier}
           </span>
+
+          {/* Notification bell */}
+          <NotificationBell />
 
           {/* Avatar + dropdown */}
           <div style={{ position: "relative" }}>
