@@ -35,7 +35,7 @@ export const POST = auth(async function POST(req) {
 
   const parsed = CreateUserSchema.safeParse(body);
   if (!parsed.success) {
-    const msg = parsed.error.errors.map((e) => e.message).join(", ");
+    const msg = parsed.error.issues.map((e) => e.message).join(", ");
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
