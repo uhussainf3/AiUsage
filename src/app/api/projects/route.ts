@@ -8,6 +8,7 @@ const CreateSchema = z.object({
   jiraProjectKey: z.string().regex(/^[A-Z][A-Z0-9]+$/).optional().or(z.literal("")),
   description: z.string().optional(),
   pmId: z.string(),
+  divisionId: z.string().optional(),
 });
 
 // GET /api/projects — list all active projects with PM info and stats
@@ -69,6 +70,7 @@ export const POST = auth(async function POST(req) {
       jiraProjectKey: data.jiraProjectKey || null,
       description: data.description,
       pmId: data.pmId,
+      divisionId: data.divisionId || null,
     },
     include: {
       pm: { select: { id: true, name: true, email: true } },

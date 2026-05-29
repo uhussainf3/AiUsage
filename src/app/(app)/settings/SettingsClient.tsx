@@ -9,10 +9,13 @@ interface User {
   name: string | null;
   email: string | null;
   role: string;
+  department: string | null;
   tier: string;
   isActive: boolean;
   approvalCount: number;
 }
+
+const DEPARTMENTS = ["QA", "Development", "DevOps", "Management", "Business Analysis", "Other"];
 
 interface ClaimSettings {
   require_corroborator: string;
@@ -317,7 +320,8 @@ export function SettingsClient({
                   <thead>
                     <tr>
                       <th>Member</th>
-                      <th>Role</th>
+                      <th>System Role</th>
+                      <th>Department</th>
                       <th>Tier</th>
                       <th>Approvals</th>
                       <th>Status</th>
@@ -356,6 +360,21 @@ export function SettingsClient({
                           >
                             {ROLES.map((r) => (
                               <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="select"
+                            style={{ width: "auto", padding: "5px 8px", fontSize: 12.5 }}
+                            value={u.department ?? ""}
+                            onChange={(e) => updateUser(u.id, { department: e.target.value || null })}
+                            disabled={savingId === u.id}
+                            title="Functional team — shown on leaderboard instead of system role"
+                          >
+                            <option value="">— Not set —</option>
+                            {DEPARTMENTS.map((d) => (
+                              <option key={d} value={d}>{d}</option>
                             ))}
                           </select>
                         </td>

@@ -7,6 +7,7 @@ const UpdateSchema = z.object({
   role: z
     .enum(["QA_MEMBER", "QA_LEAD", "DEV_LEAD", "PROJECT_MANAGER", "ADMIN"])
     .optional(),
+  department: z.string().max(50).nullable().optional(),
   tier: z.enum(["NEW", "TRUSTED", "PRO"]).optional(),
   isActive: z.boolean().optional(),
 });
@@ -46,7 +47,7 @@ export const PATCH = auth(async function PATCH(
   const updated = await prisma.user.update({
     where: { id },
     data: parsed.data,
-    select: { id: true, name: true, email: true, role: true, tier: true, isActive: true, approvalCount: true },
+    select: { id: true, name: true, email: true, role: true, department: true, tier: true, isActive: true, approvalCount: true },
   });
 
   return NextResponse.json(updated);

@@ -22,6 +22,8 @@ export interface ClaimRecord {
   submitterEmail: string | null;
   projectId: string | null;
   projectName: string | null;
+  divisionId: string | null;
+  divisionName: string | null;
 }
 
 export interface UserSummary {
@@ -52,17 +54,19 @@ export interface WeekBucket {
   claimCount: number;
 }
 
+export interface DivisionOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   claims: ClaimRecord[];
-  userSummaries: UserSummary[];
-  projectSummaries: ProjectSummary[];
-  typeSummaries: TypeSummary[];
-  weekBuckets: WeekBucket[];
+  divisions: DivisionOption[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type Period = "7d" | "30d" | "90d" | "all";
+type Period = "7d" | "30d" | "90d" | "all" | "custom";
 
 function periodMs(p: Period): number {
   if (p === "7d") return 7 * 24 * 60 * 60 * 1000;
@@ -104,6 +108,11 @@ function fmtDate(iso: string): string {
   });
 }
 
+// ISO date string for <input type="date"> default value
+function toDateInputValue(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 const CLAIM_TYPE_LABELS: Record<string, string> = {
   TEST_AUTOMATION: "Test Automation",
   BUG_DETECTION: "Bug Detection",
@@ -117,28 +126,47 @@ const HOURLY_RATE = 45;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ReportsClient({
-  claims,
-  userSummaries,
-  projectSummaries,
-  typeSummaries,
-  weekBuckets,
-}: Props) {
+export function ReportsClient({ claims, divisions }: Props) {
   const [period, setPeriod] = useState<Period>("30d");
+  const [divisionFilter, setDivisionFilter] = useState("");
+  const [customFrom, setCustomFrom] = useState(() =>
+    toDateInputValue(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+  );
+  const [customTo, setCustomTo] = useState(() => toDateInputValue(new Date()));
 
+  // Compute the cutoff date for standard periods
   const cutoff = useMemo(() => {
+    if (period === "custom") {
+      return customFrom ? new Date(customFrom) : new Date(0);
+    }
     const ms = periodMs(period);
     if (ms === Infinity) return new Date(0);
     return new Date(Date.now() - ms);
-  }, [period]);
+  }, [period, customFrom]);
 
-  // Filter all data to the selected period
-  const filteredClaims = useMemo(
-    () => claims.filter((c) => new Date(c.createdAt) >= cutoff),
-    [claims, cutoff]
-  );
+  // Upper bound for custom range
+  const upperBound = useMemo(() => {
+    if (period === "custom" && customTo) {
+      const d = new Date(customTo);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    }
+    return new Date(); // now
+  }, [period, customTo]);
 
-  // Recompute summaries from filtered claims
+  // Filter by period, then by division
+  const filteredClaims = useMemo(() => {
+    let result = claims.filter((c) => {
+      const d = new Date(c.createdAt);
+      return d >= cutoff && d <= upperBound;
+    });
+    if (divisionFilter) {
+      result = result.filter((c) => c.divisionId === divisionFilter);
+    }
+    return result;
+  }, [claims, cutoff, upperBound, divisionFilter]);
+
+  // Recompute user summaries from filtered claims
   const filteredUserMap = useMemo(() => {
     const map = new Map<string, UserSummary>();
     for (const c of filteredClaims) {
@@ -197,13 +225,57 @@ export function ReportsClient({
     return Array.from(map.values()).sort((a, b) => b.totalHours - a.totalHours);
   }, [filteredClaims]);
 
-  // Weekly trend — last 8 buckets that fall within the period
-  const filteredWeeks = useMemo(() => {
-    const relevant = weekBuckets.filter(
-      (w) => new Date(w.weekStart) >= cutoff || period === "all"
-    );
-    return relevant.slice(-8);
-  }, [weekBuckets, cutoff, period]);
+  // Weekly trend — computed dynamically from filtered claims
+  const filteredWeeks = useMemo((): WeekBucket[] => {
+    if (filteredClaims.length === 0) return [];
+
+    // Determine the start of the range
+    let rangeStart: Date;
+    if (period === "custom" && customFrom) {
+      rangeStart = new Date(customFrom);
+    } else if (period === "all") {
+      // Use the earliest claim date
+      const earliest = Math.min(
+        ...filteredClaims.map((c) => new Date(c.createdAt).getTime())
+      );
+      rangeStart = new Date(earliest);
+    } else {
+      rangeStart = new Date(cutoff);
+    }
+
+    const rangeEnd = upperBound;
+
+    // Align to the Sunday of the week that contains rangeStart
+    const weekStart = new Date(rangeStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const buckets: WeekBucket[] = [];
+    let current = new Date(weekStart);
+
+    while (current <= rangeEnd) {
+      const wStart = new Date(current);
+      const wEnd = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const wClaims = filteredClaims.filter((c) => {
+        const d = new Date(c.createdAt);
+        return d >= wStart && d < wEnd;
+      });
+
+      const mo = wStart.getMonth() + 1;
+      const dy = wStart.getDate();
+      buckets.push({
+        label: `${mo}/${dy}`,
+        weekStart: wStart.toISOString(),
+        hours: wClaims.reduce((s, c) => s + (c.approvedHours ?? c.hoursSaved), 0),
+        claimCount: wClaims.length,
+      });
+
+      current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+
+    return buckets;
+  }, [filteredClaims, period, cutoff, upperBound, customFrom]);
 
   // Summary stats
   const totalHours = useMemo(
@@ -223,20 +295,46 @@ export function ReportsClient({
 
   const recentApprovals = filteredClaims.slice(0, 10);
 
+  const weekLabel =
+    period === "7d"
+      ? "This week"
+      : period === "30d"
+      ? `Last ~${filteredWeeks.length} weeks`
+      : period === "90d"
+      ? `Last ~${filteredWeeks.length} weeks`
+      : period === "custom"
+      ? `${filteredWeeks.length} week${filteredWeeks.length !== 1 ? "s" : ""} in range`
+      : `All time — ${filteredWeeks.length} weeks`;
+
   return (
     <div className="page wide">
       {/* ── Header ── */}
-      <div className="page-head">
+      <div className="page-head" style={{ flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1>Reports</h1>
-          <p className="sub">
-            AI productivity impact · management view
-          </p>
+          <p className="sub">AI productivity impact · management view</p>
         </div>
-        <div className="head-actions">
+        <div className="head-actions" style={{ flexWrap: "wrap", gap: 8 }}>
+          {/* Division filter */}
+          {divisions.length > 0 && (
+            <select
+              className="select"
+              style={{ fontSize: 13, padding: "6px 12px", height: 36 }}
+              value={divisionFilter}
+              onChange={(e) => setDivisionFilter(e.target.value)}
+            >
+              <option value="">All Divisions</option>
+              {divisions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Period filter */}
           <div className="seg">
-            {(["7d", "30d", "90d", "all"] as Period[]).map((p) => (
+            {(["7d", "30d", "90d", "all", "custom"] as Period[]).map((p) => (
               <button
                 key={p}
                 className={period === p ? "on" : ""}
@@ -248,10 +346,36 @@ export function ReportsClient({
                   ? "30 days"
                   : p === "90d"
                   ? "90 days"
-                  : "All time"}
+                  : p === "all"
+                  ? "All time"
+                  : "Custom"}
               </button>
             ))}
           </div>
+
+          {/* Custom date pickers */}
+          {period === "custom" && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="date"
+                className="input"
+                style={{ fontSize: 13, padding: "4px 10px", height: 36 }}
+                value={customFrom}
+                max={customTo}
+                onChange={(e) => setCustomFrom(e.target.value)}
+              />
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>to</span>
+              <input
+                type="date"
+                className="input"
+                style={{ fontSize: 13, padding: "4px 10px", height: 36 }}
+                value={customTo}
+                min={customFrom}
+                max={toDateInputValue(new Date())}
+                onChange={(e) => setCustomTo(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -288,7 +412,7 @@ export function ReportsClient({
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-head">
           <div className="card-title">Weekly Trend — Hours Saved</div>
-          <span className="card-sub">Last 8 weeks in period</span>
+          <span className="card-sub">{weekLabel}</span>
         </div>
         <div style={{ padding: "24px 24px 16px" }}>
           {filteredWeeks.length === 0 ? (
@@ -296,7 +420,13 @@ export function ReportsClient({
               <p>No approved claims in this period.</p>
             </div>
           ) : (
-            <div className={styles.barChart}>
+            <div
+              className={styles.barChart}
+              style={{
+                // Shrink columns if there are many weeks to avoid overcrowding
+                gap: filteredWeeks.length > 16 ? 4 : 10,
+              }}
+            >
               {filteredWeeks.map((w) => (
                 <div key={w.weekStart} className={styles.barCol}>
                   <div className={styles.barLabel}>
@@ -308,10 +438,13 @@ export function ReportsClient({
                       style={{
                         height: `${(w.hours / maxWeekHours) * 100}%`,
                       }}
-                      title={`${w.claimCount} claim${w.claimCount !== 1 ? "s" : ""}`}
+                      title={`${w.label}: ${w.claimCount} claim${w.claimCount !== 1 ? "s" : ""}`}
                     />
                   </div>
-                  <div className={styles.barTick}>{w.label}</div>
+                  {/* Only show tick labels when ≤ 20 weeks to avoid overlap */}
+                  {filteredWeeks.length <= 20 && (
+                    <div className={styles.barTick}>{w.label}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -610,6 +743,7 @@ export function ReportsClient({
                 <th>Submitter</th>
                 <th>Ticket</th>
                 <th>Project</th>
+                <th>Division</th>
                 <th>Type</th>
                 <th>Hours</th>
               </tr>
@@ -663,11 +797,14 @@ export function ReportsClient({
                       </span>
                     )}
                   </td>
-                  <td
-                    style={{ fontSize: 13, color: "var(--ink-2)" }}
-                  >
+                  <td style={{ fontSize: 13, color: "var(--ink-2)" }}>
                     {c.projectName ?? (
                       <span style={{ color: "var(--muted)" }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {c.divisionName ?? (
+                      <span style={{ color: "var(--muted-2)" }}>—</span>
                     )}
                   </td>
                   <td>

@@ -125,6 +125,7 @@ export function ProjectsClient({
   const [newKey, setNewKey] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newPmId, setNewPmId] = useState(currentUserId);
+  const [newDivisionId, setNewDivisionId] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -168,6 +169,7 @@ export function ProjectsClient({
           jiraProjectKey: newKey.toUpperCase() || undefined,
           description: newDesc || undefined,
           pmId: newPmId,
+          divisionId: newDivisionId || undefined,
         }),
       });
       if (!res.ok) {
@@ -178,6 +180,7 @@ export function ProjectsClient({
         setNewName("");
         setNewKey("");
         setNewDesc("");
+        setNewDivisionId("");
         startTransition(() => router.refresh());
       }
     } catch {
@@ -677,7 +680,7 @@ export function ProjectsClient({
               />
             </div>
 
-            <div className="field" style={{ marginBottom: 20 }}>
+            <div className="field" style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 6 }}>Project Manager *</label>
               <select
                 className="select"
@@ -690,6 +693,29 @@ export function ProjectsClient({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="field" style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>
+                Division *
+              </label>
+              <select
+                className="select"
+                value={newDivisionId}
+                onChange={(e) => setNewDivisionId(e.target.value)}
+              >
+                <option value="">— Select a Division —</option>
+                {divisions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              {!newDivisionId && (
+                <span className="help" style={{ color: "var(--rose)" }}>
+                  Division is required.
+                </span>
+              )}
             </div>
 
             {createError && (
@@ -708,7 +734,7 @@ export function ProjectsClient({
               <button
                 className="btn primary"
                 onClick={handleCreate}
-                disabled={creating || newName.trim().length < 2 || !newPmId}
+                disabled={creating || newName.trim().length < 2 || !newPmId || !newDivisionId}
               >
                 {creating ? "Creating…" : "Create Project"}
               </button>

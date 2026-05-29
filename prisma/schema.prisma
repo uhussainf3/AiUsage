@@ -57,6 +57,7 @@ model User {
   emailVerified DateTime?
   image         String?
   role          String    @default("QA_MEMBER")
+  department    String?   // Functional team (QA, Development, DevOps, Management…) — separate from system role
   tier          String    @default("NEW")
   isActive      Boolean   @default(true)
   approvalCount Int       @default(0)

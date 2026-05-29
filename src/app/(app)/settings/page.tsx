@@ -12,7 +12,7 @@ export default async function SettingsPage() {
 
   const [users, settingsRaw] = await Promise.all([
     prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, tier: true, isActive: true, approvalCount: true },
+      select: { id: true, name: true, email: true, role: true, department: true, tier: true, isActive: true, approvalCount: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.setting.findMany({ where: { key: { in: CLAIM_SETTING_KEYS } } }),

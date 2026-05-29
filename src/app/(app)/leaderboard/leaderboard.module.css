@@ -129,3 +129,72 @@
   color: var(--ink);
   margin-top: 2px;
 }
+
+.podOverall {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  font-family: var(--mono);
+}
+
+/* ── Division standings ──────────────────────────────────── */
+.divStandingRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.divStandingRow:hover {
+  background: var(--surface) !important;
+}
+
+.divStandingRank {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 24px;
+}
+
+.divStandingInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.divStandingName {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.divStandingBar {
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.divStandingFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.divStandingHours {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 36px;
+  text-align: right;
+}
