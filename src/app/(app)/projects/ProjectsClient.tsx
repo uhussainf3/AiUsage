@@ -11,6 +11,11 @@ interface PM {
   email: string | null;
 }
 
+interface DivisionOption {
+  id: string;
+  name: string;
+}
+
 interface ProjectStat {
   id: string;
   name: string;
@@ -18,6 +23,7 @@ interface ProjectStat {
   description: string | null;
   isActive: boolean;
   pm: PM;
+  divisionId: string | null;
   totalClaims: number;
   approvedClaims: number;
   pendingClaims: number;
@@ -93,6 +99,7 @@ const modalStyle: React.CSSProperties = {
 export function ProjectsClient({
   projects,
   allUsers,
+  divisions,
   currentUserId,
   currentUserRole,
   canManage,
@@ -100,6 +107,7 @@ export function ProjectsClient({
 }: {
   projects: ProjectStat[];
   allUsers: UserOption[];
+  divisions: DivisionOption[];
   currentUserId: string;
   currentUserRole: string;
   canManage: boolean;
@@ -126,6 +134,7 @@ export function ProjectsClient({
   const [editKey, setEditKey] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editPmId, setEditPmId] = useState("");
+  const [editDivisionId, setEditDivisionId] = useState<string>("");
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -184,6 +193,7 @@ export function ProjectsClient({
     setEditKey(p.jiraProjectKey ?? "");
     setEditDesc(p.description ?? "");
     setEditPmId(p.pm.id);
+    setEditDivisionId(p.divisionId ?? "");
     setEditError("");
   }
 
@@ -200,6 +210,7 @@ export function ProjectsClient({
           jiraProjectKey: editKey.trim().toUpperCase() || null,
           description: editDesc.trim() || null,
           pmId: editPmId,
+          divisionId: editDivisionId || null,
         }),
       });
       const data = await res.json();
@@ -217,6 +228,7 @@ export function ProjectsClient({
                 name: editName.trim(),
                 jiraProjectKey: editKey.trim().toUpperCase() || null,
                 description: editDesc.trim() || null,
+                divisionId: editDivisionId || null,
                 pm: {
                   id: editPmId,
                   name: newPm?.name ?? null,
@@ -543,7 +555,7 @@ export function ProjectsClient({
               />
             </div>
 
-            <div className="field" style={{ marginBottom: 20 }}>
+            <div className="field" style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 6 }}>Project Manager *</label>
               <select
                 className="select"
@@ -560,6 +572,27 @@ export function ProjectsClient({
                 Only Project Managers and Admins are listed.
               </span>
             </div>
+
+            {divisions.length > 0 && (
+              <div className="field" style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 6 }}>
+                  Division
+                  <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>(optional)</span>
+                </label>
+                <select
+                  className="select"
+                  value={editDivisionId}
+                  onChange={(e) => setEditDivisionId(e.target.value)}
+                >
+                  <option value="">— No Division —</option>
+                  {divisions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {editError && (
               <div style={{

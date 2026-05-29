@@ -20,6 +20,7 @@ const NAV_TABS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Submit Claim", href: "/submit" },
   { label: "Projects", href: "/projects" },
+  { label: "Divisions", href: "/divisions" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Verify", href: "/verification" },
   { label: "Efficiency", href: "/efficiency" },

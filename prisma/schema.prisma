@@ -47,7 +47,7 @@ model VerificationToken {
 
 // ─── Core models ─────────────────────────────────────────────────────────────
 
-// Role: QA_MEMBER | QA_LEAD | DEV_LEAD | PROJECT_MANAGER | ADMIN
+// Role: QA_MEMBER | QA_LEAD | DEV_LEAD | PROJECT_MANAGER | DIVISION_HEAD | ADMIN
 // Tier: NEW | TRUSTED | PRO
 
 model User {
@@ -71,19 +71,22 @@ model User {
   badges             UserBadge[]
   notifications      Notification[]
   managedProjects    Project[]  @relation("ProjectPM")
+  ledDivisions       Division[] @relation("DivisionHead")
 }
 
 model Project {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  jiraProjectKey String?  @unique
+  jiraProjectKey String?   @unique
   description    String?
-  isActive       Boolean  @default(true)
+  isActive       Boolean   @default(true)
   pmId           String
-  pm             User     @relation("ProjectPM", fields: [pmId], references: [id])
+  pm             User      @relation("ProjectPM", fields: [pmId], references: [id])
   claims         Claim[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  divisionId     String?
+  division       Division? @relation(fields: [divisionId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 // ClaimStatus: PENDING | CORROBORATED | APPROVED | REDUCED | REJECTED
@@ -167,4 +170,16 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model Division {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  headId      String?
+  head        User?     @relation("DivisionHead", fields: [headId], references: [id])
+  projects    Project[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

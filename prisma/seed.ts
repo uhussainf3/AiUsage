@@ -51,6 +51,24 @@ async function main() {
   }
 
   console.log(`✓ ${settings.length} settings seeded`);
+
+  // Seed default divisions
+  const divisions = [
+    { name: "NetSuite", slug: "netsuite", description: "NetSuite ERP implementations, customizations and integrations" },
+    { name: "Dynamics", slug: "dynamics", description: "Microsoft Dynamics 365 implementations and customizations" },
+    { name: "App Dev", slug: "app-dev", description: "Custom application development" },
+    { name: "Ecommerce", slug: "ecommerce", description: "Ecommerce platforms, SCA stores and marketplace integrations" },
+    { name: "ML/AI", slug: "ml-ai", description: "Machine learning and AI solution development" },
+  ];
+  for (const d of divisions) {
+    await prisma.division.upsert({
+      where: { slug: d.slug },
+      update: { name: d.name, description: d.description },
+      create: d,
+    });
+  }
+  console.log(`✓ ${divisions.length} divisions seeded`);
+
   console.log("\n✅ Seed complete!");
 }
 

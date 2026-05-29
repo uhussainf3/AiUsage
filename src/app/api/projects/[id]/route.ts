@@ -9,6 +9,7 @@ const UpdateSchema = z.object({
   description: z.string().optional().nullable(),
   pmId: z.string().optional(),
   isActive: z.boolean().optional(),
+  divisionId: z.string().optional().nullable(),
 });
 
 // PATCH /api/projects/[id] — update project (ADMIN or that project's PM)

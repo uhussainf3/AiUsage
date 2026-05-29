@@ -16,6 +16,12 @@ export default async function ProjectsPage() {
     orderBy: { name: "asc" },
   });
 
+  // All divisions for the division selector
+  const divisionsRaw = await prisma.division.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
   // Projects with aggregated stats
   const projects = await prisma.project.findMany({
     where: { isActive: true },
@@ -58,6 +64,7 @@ export default async function ProjectsPage() {
       description: p.description,
       isActive: p.isActive,
       pm: p.pm,
+      divisionId: p.divisionId ?? null,
       totalClaims: p.claims.length,
       approvedClaims: approved.length,
       pendingClaims: pending.length,
@@ -82,6 +89,7 @@ export default async function ProjectsPage() {
     <ProjectsClient
       projects={projectStats}
       allUsers={allUsers}
+      divisions={divisionsRaw}
       currentUserId={userId}
       currentUserRole={userRole}
       canManage={canManage}
