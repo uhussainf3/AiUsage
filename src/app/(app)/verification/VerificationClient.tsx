@@ -55,7 +55,10 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
 
   const selected = claims.find((c) => c.id === selectedId);
   const corroborated = claims.filter((c) => c.status === "CORROBORATED");
-  const pending = claims.filter((c) => c.status === "PENDING");
+  // PENDING claims with a corroborator assigned — genuinely waiting for peer confirmation
+  const awaitingCorroboration = claims.filter((c) => c.status === "PENDING" && c.corroborator !== null);
+  // PENDING claims with NO corroborator — corroboration not required, ready for direct review
+  const directReview = claims.filter((c) => c.status === "PENDING" && c.corroborator === null);
 
   async function handleAction(action: "approve" | "reduce" | "reject") {
     if (!selected) return;
@@ -91,7 +94,7 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
         <div>
           <h1>Verification Queue</h1>
           <p className="sub">
-            <b>{corroborated.length}</b> ready · <b>{pending.length}</b> awaiting corroboration
+            <b>{corroborated.length}</b> corroborated · <b>{directReview.length}</b> direct review · <b>{awaitingCorroboration.length}</b> awaiting corroboration
           </p>
         </div>
       </div>
@@ -118,12 +121,22 @@ export function VerificationClient({ claims, approverId }: { claims: Claim[]; ap
                 ))}
               </div>
             )}
-            {pending.length > 0 && (
+            {directReview.length > 0 && (
               <div className={styles.queueGroup}>
                 <div className={styles.queueGroupLabel}>
-                  ⏳ Awaiting Corroboration ({pending.length})
+                  📋 Direct Review — No Corroboration Required ({directReview.length})
                 </div>
-                {pending.map((c) => (
+                {directReview.map((c) => (
+                  <QueueRow key={c.id} claim={c} selected={selectedId === c.id} onClick={() => setSelectedId(c.id)} />
+                ))}
+              </div>
+            )}
+            {awaitingCorroboration.length > 0 && (
+              <div className={styles.queueGroup}>
+                <div className={styles.queueGroupLabel}>
+                  ⏳ Awaiting Corroboration ({awaitingCorroboration.length})
+                </div>
+                {awaitingCorroboration.map((c) => (
                   <QueueRow key={c.id} claim={c} selected={selectedId === c.id} onClick={() => setSelectedId(c.id)} />
                 ))}
               </div>
